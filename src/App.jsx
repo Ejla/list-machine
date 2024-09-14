@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import ListItem from "./components/ListItem";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import {
@@ -62,24 +63,27 @@ export default function App() {
       setSelectedList(newList);
       setNewListName("");
       setIsModalOpen(false);
-      localStorage.setItem("lists", JSON.stringify(updatedLists));
     }
   };
 
   const handleAddItem = () => {
     if (newItem.trim() && selectedList) {
+      const newItemObject = {
+        id: Date.now(),
+        text: newItem.trim(),
+        done: false,
+      };
       const updatedLists = lists.map((list) =>
         list.id === selectedList.id
-          ? { ...list, items: [...list.items, newItem.trim()] }
+          ? { ...list, items: [...list.items, newItemObject] }
           : list
       );
       setLists(updatedLists);
       setSelectedList({
         ...selectedList,
-        items: [...selectedList.items, newItem.trim()],
+        items: [...selectedList.items, newItemObject],
       });
       setNewItem("");
-      localStorage.setItem("lists", JSON.stringify(updatedLists));
     }
   };
 
@@ -95,7 +99,6 @@ export default function App() {
       setNewListName("");
       setIsModalOpen(false);
       setIsRenaming(false);
-      localStorage.setItem("lists", JSON.stringify(updatedLists));
     }
   };
 
@@ -105,7 +108,6 @@ export default function App() {
       setLists(updatedLists);
       setSelectedList(updatedLists[0] || null);
       setIsDeleteConfirmOpen(false);
-      localStorage.setItem("lists", JSON.stringify(updatedLists));
     }
   };
 
@@ -113,6 +115,49 @@ export default function App() {
     setNewListName(selectedList.name);
     setIsRenaming(true);
     setIsModalOpen(true);
+  };
+
+  const handleToggleItem = (itemId) => {
+    const updatedLists = lists.map((list) =>
+      list.id === selectedList.id
+        ? {
+            ...list,
+            items: list.items.map((item) =>
+              item.id === itemId ? { ...item, done: !item.done } : item
+            ),
+          }
+        : list
+    );
+    setLists(updatedLists);
+    setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
+  };
+
+  const handleEditItem = (itemId, newText) => {
+    const updatedLists = lists.map((list) =>
+      list.id === selectedList.id
+        ? {
+            ...list,
+            items: list.items.map((item) =>
+              item.id === itemId ? { ...item, text: newText } : item
+            ),
+          }
+        : list
+    );
+    setLists(updatedLists);
+    setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
+  };
+
+  const handleDeleteItem = (itemId) => {
+    const updatedLists = lists.map((list) =>
+      list.id === selectedList.id
+        ? {
+            ...list,
+            items: list.items.filter((item) => item.id !== itemId),
+          }
+        : list
+    );
+    setLists(updatedLists);
+    setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
   };
 
   return (
@@ -174,10 +219,14 @@ export default function App() {
               <Button onClick={handleAddItem}>Add</Button>
             </div>
             <ul className="space-y-2">
-              {selectedList.items.map((item, index) => (
-                <li key={index} className="bg-secondary p-2 rounded">
-                  {item}
-                </li>
+              {selectedList.items.map((item) => (
+                <ListItem
+                  key={item.id}
+                  item={item}
+                  onToggle={handleToggleItem}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
+                />
               ))}
             </ul>
           </>
