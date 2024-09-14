@@ -36,12 +36,25 @@ export default function App() {
 
   useEffect(() => {
     const storedLists = localStorage.getItem("lists");
+    const storedSelectedList = localStorage.getItem("selectedList");
+
     if (storedLists) {
       try {
         const parsedLists = JSON.parse(storedLists);
         setLists(parsedLists);
+
+        if (storedSelectedList) {
+          const parsedSelectedList = JSON.parse(storedSelectedList);
+          // Ensure the selected list still exists in the lists array
+          const listExists = parsedLists.some(list => list.id === parsedSelectedList.id);
+          if (listExists) {
+            setSelectedList(parsedSelectedList);
+          } else {
+            localStorage.removeItem("selectedList");
+          }
+        }
       } catch (error) {
-        console.error("Error parsing lists from local storage:", error);
+        console.error("Error parsing data from local storage:", error);
       }
     }
   }, []);
@@ -51,6 +64,15 @@ export default function App() {
       localStorage.setItem("lists", JSON.stringify(lists));
     }
   }, [lists]);
+
+  // Add this new useEffect hook
+  useEffect(() => {
+    if (selectedList) {
+      localStorage.setItem('selectedList', JSON.stringify(selectedList));
+    } else {
+      localStorage.removeItem('selectedList');
+    }
+  }, [selectedList]);
 
   const handleCreateList = () => {
     if (newListName.trim()) {
