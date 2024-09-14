@@ -1,4 +1,6 @@
 import { useState } from "react";
+import PropTypes from "prop-types";
+
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -10,7 +12,7 @@ import {
 } from "./ui/dropdown-menu";
 import { MoreVertical } from "lucide-react";
 
-const ListItem = ({ item, onToggle, onEdit, onDelete }) => {
+export const ListItem = ({ item, onToggle, onEdit, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(item.text);
 
@@ -65,4 +67,11 @@ const ListItem = ({ item, onToggle, onEdit, onDelete }) => {
   );
 };
 
-export default ListItem;
+ListItem.propTypes = {
+  item: PropTypes.object.isRequired,
+  onToggle: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
+ListItem.displayName = "ListItem";
