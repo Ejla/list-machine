@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MoreVertical, GripVertical, Circle, CheckCircle } from "lucide-react";
+import { MoreVertical, GripVertical, Circle, CheckCircle, Check } from "lucide-react";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -28,6 +28,7 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
   const [editedText, setEditedText] = useState(item.text);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const inputRef = useRef(null);
+  const saveButtonRef = useRef(null);
 
   const {
     attributes,
@@ -54,11 +55,15 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
   };
 
   const handleCancelEdit = () => {
-    if (editedText !== item.text) {
-      setIsAlertOpen(true);
-    } else {
-      setIsEditing(false);
-    }
+    setTimeout(() => {
+      if (document.activeElement !== saveButtonRef.current) {
+        if (editedText !== item.text) {
+          setIsAlertOpen(true);
+        } else {
+          setIsEditing(false);
+        }
+      }
+    }, 0);
   };
 
   const handleConfirmCancel = () => {
@@ -69,7 +74,6 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
 
   const handleContinueEditing = () => {
     setIsAlertOpen(false);
-    // Set focus back to the input field after a short delay
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
@@ -83,15 +87,16 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
         {...attributes}
         className="flex items-center justify-between bg-secondary p-2 rounded mb-2"
       >
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-grow">
           <div {...listeners}>
             <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" />
           </div>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onToggle(item.id)}
-            className="p-0"
+            onClick={() => !isEditing && onToggle(item.id)}
+            className={`p-0 ${isEditing ? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={isEditing}
           >
             {item.done ? (
               <CheckCircle className="h-5 w-5" />
@@ -100,14 +105,23 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
             )}
           </Button>
           {isEditing ? (
-            <Input
-              ref={inputRef}
-              value={editedText}
-              onChange={(e) => setEditedText(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSave()}
-              onBlur={handleCancelEdit}
-              className="max-w-[200px]"
-            />
+            <div className="flex items-center space-x-2 flex-grow">
+              <Input
+                ref={inputRef}
+                value={editedText}
+                onChange={(e) => setEditedText(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSave()}
+                onBlur={handleCancelEdit}
+                className="flex-grow"
+              />
+              <Button 
+                ref={saveButtonRef}
+                size="sm" 
+                onClick={handleSave}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </div>
           ) : (
             <span
               onClick={() => setIsEditing(true)}
@@ -119,21 +133,23 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
             </span>
           )}
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => setIsEditing(true)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(item.id)}>
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {!isEditing && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(item.id)}>
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </li>
 
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
