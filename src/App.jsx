@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -41,6 +41,7 @@ export default function App() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deletedItems, setDeletedItems] = useState([]);
   const { toast } = useToast();
+  const [shouldFocusAddItem, setShouldFocusAddItem] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -91,23 +92,24 @@ export default function App() {
     }
   }, [selectedList]);
 
-  const handleCreateList = () => {
+  const handleCreateList = useCallback(() => {
     if (newListName.trim()) {
       const newList = {
         id: Date.now(),
         name: newListName.trim(),
         items: [],
-        createdAt: Date.now(), // Add this line
+        createdAt: Date.now(),
       };
       const updatedLists = [newList, ...lists];
       setLists(updatedLists);
       setSelectedList(newList);
       setNewListName("");
       setIsModalOpen(false);
+      setShouldFocusAddItem(true); // Set this to true when a new list is created
     }
-  };
+  }, [newListName, lists, setLists, setSelectedList]);
 
-  const handleRenameList = () => {
+  const handleRenameList = useCallback(() => {
     if (newListName.trim() && selectedList) {
       const updatedLists = lists.map((list) =>
         list.id === selectedList.id
@@ -120,7 +122,13 @@ export default function App() {
       setIsModalOpen(false);
       setIsRenaming(false);
     }
-  };
+  }, [newListName, selectedList, lists, setLists, setSelectedList]);
+
+  const handleKeyPress = useCallback((e) => {
+    if (e.key === "Enter") {
+      isRenaming ? handleRenameList() : handleCreateList();
+    }
+  }, [isRenaming, handleRenameList, handleCreateList]);
 
   const handleDeleteList = () => {
     if (selectedList) {
@@ -225,6 +233,8 @@ export default function App() {
             deletedItems,
             setDeletedItems,
             toast,
+            shouldFocusAddItem,
+            setShouldFocusAddItem,
           }}
         />
       </DndContext>
@@ -240,7 +250,9 @@ export default function App() {
           <Input
             value={newListName}
             onChange={(e) => setNewListName(e.target.value)}
+            onKeyPress={handleKeyPress}
             placeholder="List Name"
+            autoFocus
           />
           <DialogFooter>
             <Button

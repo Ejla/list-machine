@@ -21,6 +21,8 @@ export const List = ({
   setLists,
   selectedList,
   setSelectedList,
+  shouldFocusAddItem,
+  setShouldFocusAddItem,
   setIsDeleteConfirmOpen,
   newItem,
   setNewItem,
@@ -32,7 +34,15 @@ export const List = ({
   toast,
 }) => {
   const listItemsRef = useRef(null);
+  const addItemInputRef = useRef(null);
   const toastIdRef = useRef(null);
+
+  useEffect(() => {
+    if (shouldFocusAddItem && addItemInputRef.current) {
+      addItemInputRef.current.focus();
+      setShouldFocusAddItem(false);
+    }
+  }, [shouldFocusAddItem, setShouldFocusAddItem]);
 
   useEffect(() => {
     if (deletedItems.length > 0) {
@@ -222,6 +232,7 @@ export const List = ({
             </div>
             <div className="flex gap-2">
               <Input
+                ref={addItemInputRef}
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -273,4 +284,6 @@ List.propTypes = {
   deletedItems: PropTypes.array.isRequired,
   setDeletedItems: PropTypes.func.isRequired,
   toast: PropTypes.func.isRequired,
+  shouldFocusAddItem: PropTypes.bool.isRequired,
+  setShouldFocusAddItem: PropTypes.func.isRequired,
 };
