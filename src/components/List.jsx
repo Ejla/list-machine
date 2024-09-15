@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import PropTypes from "prop-types";
 import { MoreVertical } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { formatDistanceToNow } from 'date-fns';
 
 import {
   DropdownMenu,
@@ -30,6 +31,7 @@ export const List = ({
   setDeletedItems,
   toast,
 }) => {
+  const listItemsRef = useRef(null);
   const toastIdRef = useRef(null);
 
   useEffect(() => {
@@ -56,6 +58,18 @@ export const List = ({
     }
   }, [deletedItems, toast]);
 
+  useEffect(() => {
+    if (selectedList && !selectedList.createdAt) {
+      const updatedList = { ...selectedList, createdAt: Date.now() };
+      setSelectedList(updatedList);
+      setLists(prevLists => 
+        prevLists.map(list => 
+          list.id === selectedList.id ? updatedList : list
+        )
+      );
+    }
+  }, [selectedList, setSelectedList, setLists]);
+
   const handleAddItem = () => {
     if (newItem.trim() && selectedList) {
       const newItemObject = {
@@ -74,6 +88,13 @@ export const List = ({
         items: [...selectedList.items, newItemObject],
       });
       setNewItem("");
+
+      // Scroll to bottom after adding new item
+      setTimeout(() => {
+        if (listItemsRef.current) {
+          listItemsRef.current.scrollTop = listItemsRef.current.scrollHeight;
+        }
+      }, 0);
     }
   };
 
@@ -172,29 +193,34 @@ export const List = ({
   };
 
   return (
-    <div className="flex-1 p-4">
+    <div className="flex-1 flex flex-col overflow-hidden">
       {selectedList && (
         <>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">{selectedList.name}</h2>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={openRenameModal}>
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsDeleteConfirmOpen(true)}>
-                  Delete List
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <div className="space-y-2">
-            <div className="flex gap-2 mb-4">
+          <div className="flex-shrink-0 bg-background z-10 p-4 border-b">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-2xl font-bold">{selectedList.name}</h2>
+                <span className="text-xs text-muted-foreground">
+                  Created {formatDistanceToNow(new Date(selectedList.createdAt || Date.now()), { addSuffix: true })}
+                </span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={openRenameModal}>
+                    Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsDeleteConfirmOpen(true)}>
+                    Delete List
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="flex gap-2">
               <Input
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
@@ -203,6 +229,8 @@ export const List = ({
               />
               <Button onClick={handleAddItem}>Add</Button>
             </div>
+          </div>
+          <div ref={listItemsRef} className="flex-1 overflow-y-auto p-4">
             <SortableContext 
               items={selectedList.items.map(item => item.id)}
               strategy={verticalListSortingStrategy}

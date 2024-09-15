@@ -55,17 +55,22 @@ export default function App() {
     if (storedLists) {
       try {
         const parsedLists = JSON.parse(storedLists);
-        setLists(parsedLists);
+        // Add createdAt to any lists that don't have it
+        const updatedLists = parsedLists.map(list => ({
+          ...list,
+          createdAt: list.createdAt || Date.now()
+        }));
+        setLists(updatedLists);
 
-        if (storedSelectedListId && parsedLists.length > 0) {
-          const selectedList = parsedLists.find(list => list.id.toString() === storedSelectedListId);
+        if (storedSelectedListId) {
+          const selectedList = updatedLists.find(list => list.id.toString() === storedSelectedListId);
           if (selectedList) {
             setSelectedList(selectedList);
-          } else if (parsedLists.length > 0) {
-            setSelectedList(parsedLists[0]);
+          } else if (updatedLists.length > 0) {
+            setSelectedList(updatedLists[0]);
           }
-        } else if (parsedLists.length > 0) {
-          setSelectedList(parsedLists[0]);
+        } else if (updatedLists.length > 0) {
+          setSelectedList(updatedLists[0]);
         }
       } catch (error) {
         console.error("Error parsing data from local storage:", error);
@@ -87,7 +92,12 @@ export default function App() {
 
   const handleCreateList = () => {
     if (newListName.trim()) {
-      const newList = { id: Date.now(), name: newListName.trim(), items: [] };
+      const newList = {
+        id: Date.now(),
+        name: newListName.trim(),
+        items: [],
+        createdAt: Date.now(), // Add this line
+      };
       const updatedLists = [newList, ...lists];
       setLists(updatedLists);
       setSelectedList(newList);
@@ -177,28 +187,32 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* Left column */}
-      <div className="w-[300px] p-4 border-r border-border">
-        <h1 className="text-2xl font-bold mb-4">ListMachine</h1>
-        <Button onClick={() => setIsModalOpen(true)} className="w-full mb-4">
-          Create New List
-        </Button>
-        <ScrollArea className="h-[calc(100vh-140px)]">
-          {lists.map((list) => (
-            <Button
-              key={list.id}
-              variant={
-                selectedList && selectedList.id === list.id
-                  ? "secondary"
-                  : "ghost"
-              }
-              className="w-full justify-start mb-2"
-              onClick={() => setSelectedList(list)}
-            >
-              {list.name}
-            </Button>
-          ))}
+      <div className="w-[300px] border-r border-border flex flex-col">
+        <div className="flex-shrink-0 p-4 border-b">
+          <h1 className="text-2xl font-bold mb-4">ListMachine</h1>
+          <Button onClick={() => setIsModalOpen(true)} className="w-full">
+            Create New List
+          </Button>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-4">
+            {lists.map((list) => (
+              <Button
+                key={list.id}
+                variant={
+                  selectedList && selectedList.id === list.id
+                    ? "secondary"
+                    : "ghost"
+                }
+                className="w-full justify-start mb-2"
+                onClick={() => setSelectedList(list)}
+              >
+                {list.name}
+              </Button>
+            ))}
+          </div>
         </ScrollArea>
       </div>
 
