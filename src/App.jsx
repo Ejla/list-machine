@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 import { List } from "./components/List";
 import { Button } from "./components/ui/button";
@@ -30,33 +32,40 @@ import { useToast } from "./hooks/use-toast";
 
 export default function App() {
   const [lists, setLists] = useState([]);
+  const [selectedList, setSelectedList] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
-  const [selectedList, setSelectedList] = useState(null);
   const [newItem, setNewItem] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deletedItems, setDeletedItems] = useState([]);
   const { toast } = useToast();
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     const storedLists = localStorage.getItem("lists");
-    const storedSelectedList = localStorage.getItem("selectedList");
+    const storedSelectedListId = localStorage.getItem("selectedListId");
 
     if (storedLists) {
       try {
         const parsedLists = JSON.parse(storedLists);
         setLists(parsedLists);
 
-        if (storedSelectedList) {
-          const parsedSelectedList = JSON.parse(storedSelectedList);
-          // Ensure the selected list still exists in the lists array
-          const listExists = parsedLists.some(list => list.id === parsedSelectedList.id);
-          if (listExists) {
-            setSelectedList(parsedSelectedList);
-          } else {
-            localStorage.removeItem("selectedList");
+        if (storedSelectedListId && parsedLists.length > 0) {
+          const selectedList = parsedLists.find(list => list.id.toString() === storedSelectedListId);
+          if (selectedList) {
+            setSelectedList(selectedList);
+          } else if (parsedLists.length > 0) {
+            setSelectedList(parsedLists[0]);
           }
+        } else if (parsedLists.length > 0) {
+          setSelectedList(parsedLists[0]);
         }
       } catch (error) {
         console.error("Error parsing data from local storage:", error);
@@ -70,12 +79,9 @@ export default function App() {
     }
   }, [lists]);
 
-  // Add this new useEffect hook
   useEffect(() => {
     if (selectedList) {
-      localStorage.setItem('selectedList', JSON.stringify(selectedList));
-    } else {
-      localStorage.removeItem('selectedList');
+      localStorage.setItem('selectedListId', selectedList.id.toString());
     }
   }, [selectedList]);
 
@@ -147,6 +153,29 @@ export default function App() {
     });
   };
 
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id && selectedList) {
+      const oldIndex = selectedList.items.findIndex(item => item.id === active.id);
+      const newIndex = selectedList.items.findIndex(item => item.id === over.id);
+
+      const newItems = arrayMove(selectedList.items, oldIndex, newIndex);
+      const updatedList = { ...selectedList, items: newItems };
+
+      setSelectedList(updatedList);
+      setLists(prevLists => 
+        prevLists.map(list => 
+          list.id === selectedList.id ? updatedList : list
+        )
+      );
+
+      localStorage.setItem('lists', JSON.stringify(lists.map(list => 
+        list.id === selectedList.id ? updatedList : list
+      )));
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Left column */}
@@ -174,23 +203,29 @@ export default function App() {
       </div>
 
       {/* Right column */}
-      <List
-        {...{
-          lists,
-          setLists,
-          selectedList,
-          setSelectedList,
-          setIsDeleteConfirmOpen,
-          newItem,
-          setNewItem,
-          setNewListName,
-          setIsRenaming,
-          setIsModalOpen,
-          deletedItems,
-          setDeletedItems,
-          toast,
-        }}
-      />
+      <DndContext 
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <List
+          {...{
+            lists,
+            setLists,
+            selectedList,
+            setSelectedList,
+            setIsDeleteConfirmOpen,
+            newItem,
+            setNewItem,
+            setNewListName,
+            setIsRenaming,
+            setIsModalOpen,
+            deletedItems,
+            setDeletedItems,
+            toast,
+          }}
+        />
+      </DndContext>
 
       {/* Modal for creating/renaming list */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

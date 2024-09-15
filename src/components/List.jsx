@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react';
 import PropTypes from "prop-types";
 import { MoreVertical } from "lucide-react";
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 import {
   DropdownMenu,
@@ -192,26 +193,32 @@ export const List = ({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <div className="flex gap-2 mb-4">
-            <Input
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Add new item"
-            />
-            <Button onClick={handleAddItem}>Add</Button>
-          </div>
-          <ul className="space-y-2">
-            {selectedList.items.map((item) => (
-              <ListItem
-                key={item.id}
-                item={item}
-                onToggle={handleToggleItem}
-                onEdit={handleEditItem}
-                onDelete={handleDeleteItem}
+          <div className="space-y-2">
+            <div className="flex gap-2 mb-4">
+              <Input
+                value={newItem}
+                onChange={(e) => setNewItem(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Add new item"
               />
-            ))}
-          </ul>
+              <Button onClick={handleAddItem}>Add</Button>
+            </div>
+            <SortableContext 
+              items={selectedList.items.map(item => item.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {selectedList.items.map((item) => (
+                <ListItem
+                  key={item.id}
+                  id={item.id}
+                  item={item}
+                  onToggle={handleToggleItem}
+                  onEdit={handleEditItem}
+                  onDelete={handleDeleteItem}
+                />
+              ))}
+            </SortableContext>
+          </div>
         </>
       )}
     </div>
