@@ -95,6 +95,12 @@ export const List = ({
     setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
   };
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      handleAddItem();
+    }
+  };
+
   return (
     <div className="flex-1 p-4">
       {selectedList && (
@@ -121,6 +127,7 @@ export const List = ({
             <Input
               value={newItem}
               onChange={(e) => setNewItem(e.target.value)}
+              onKeyPress={handleKeyPress}
               placeholder="Add new item"
             />
             <Button onClick={handleAddItem}>Add</Button>
