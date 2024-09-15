@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import PropTypes from "prop-types";
 import { MoreVertical } from "lucide-react";
 
@@ -24,7 +25,36 @@ export const List = ({
   setNewListName,
   setIsRenaming,
   setIsModalOpen,
+  deletedItems,
+  setDeletedItems,
+  toast,
 }) => {
+  const toastIdRef = useRef(null);
+
+  useEffect(() => {
+    if (deletedItems.length > 0) {
+      const undoCount = deletedItems.length;
+      toastIdRef.current = Date.now();
+      toast({
+        id: toastIdRef.current,
+        title: `${undoCount} item${undoCount > 1 ? 's' : ''} deleted`,
+        action: (
+          <Button variant="outline" size="sm" onClick={handleUndoDelete}>
+            Undo
+          </Button>
+        ),
+      });
+    } else if (toastIdRef.current) {
+      // Dismiss the toast when there are no more deleted items
+      toast({
+        id: toastIdRef.current,
+        title: "All deletions undone",
+        duration: 2000, // Show this message briefly
+      });
+      toastIdRef.current = null;
+    }
+  }, [deletedItems, toast]);
+
   const handleAddItem = () => {
     if (newItem.trim() && selectedList) {
       const newItemObject = {
@@ -83,16 +113,55 @@ export const List = ({
   };
 
   const handleDeleteItem = (itemId) => {
-    const updatedLists = lists.map((list) =>
-      list.id === selectedList.id
-        ? {
-            ...list,
-            items: list.items.filter((item) => item.id !== itemId),
-          }
-        : list
-    );
-    setLists(updatedLists);
-    setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
+    const itemIndex = selectedList.items.findIndex((item) => item.id === itemId);
+    const deletedItem = selectedList.items[itemIndex];
+
+    setLists((prevLists) => {
+      const updatedLists = prevLists.map((list) =>
+        list.id === selectedList.id
+          ? {
+              ...list,
+              items: list.items.filter((item) => item.id !== itemId),
+            }
+          : list
+      );
+      setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
+      return updatedLists;
+    });
+
+    setDeletedItems((prevDeletedItems) => [
+      ...prevDeletedItems,
+      { listId: selectedList.id, index: itemIndex, item: deletedItem },
+    ]);
+  };
+
+  const handleUndoDelete = () => {
+    setDeletedItems((prevDeletedItems) => {
+      if (prevDeletedItems.length > 0 && selectedList) {
+        const lastDeletedItem = prevDeletedItems[prevDeletedItems.length - 1];
+        if (lastDeletedItem.listId === selectedList.id) {
+          setLists((prevLists) => {
+            const updatedLists = prevLists.map((list) =>
+              list.id === selectedList.id
+                ? {
+                    ...list,
+                    items: [
+                      ...list.items.slice(0, lastDeletedItem.index),
+                      lastDeletedItem.item,
+                      ...list.items.slice(lastDeletedItem.index),
+                    ],
+                  }
+                : list
+            );
+            setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
+            return updatedLists;
+          });
+          
+          return prevDeletedItems.slice(0, -1);
+        }
+      }
+      return prevDeletedItems;
+    });
   };
 
   const handleKeyPress = (e) => {
@@ -166,4 +235,7 @@ List.propTypes = {
   setIsModalOpen: PropTypes.func,
   setNewListName: PropTypes.func,
   setIsRenaming: PropTypes.func,
+  deletedItems: PropTypes.array.isRequired,
+  setDeletedItems: PropTypes.func.isRequired,
+  toast: PropTypes.func.isRequired,
 };

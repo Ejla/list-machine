@@ -25,6 +25,9 @@ import {
   AlertDialogTitle,
 } from "./components/ui/alert-dialog";
 
+import { Toaster } from "./components/ui/toaster";
+import { useToast } from "./hooks/use-toast";
+
 export default function App() {
   const [lists, setLists] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +36,8 @@ export default function App() {
   const [newItem, setNewItem] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deletedItems, setDeletedItems] = useState([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     const storedLists = localStorage.getItem("lists");
@@ -109,6 +114,39 @@ export default function App() {
     }
   };
 
+  const handleUndoDelete = () => {
+    setDeletedItems((prevDeletedItems) => {
+      if (prevDeletedItems.length > 0 && selectedList) {
+        const lastDeletedItem = prevDeletedItems[prevDeletedItems.length - 1];
+        if (lastDeletedItem.listId === selectedList.id) {
+          setLists((prevLists) => {
+            const updatedLists = prevLists.map((list) =>
+              list.id === selectedList.id
+                ? {
+                    ...list,
+                    items: [
+                      ...list.items.slice(0, lastDeletedItem.index),
+                      lastDeletedItem.item,
+                      ...list.items.slice(lastDeletedItem.index),
+                    ],
+                  }
+                : list
+            );
+            setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
+            return updatedLists;
+          });
+          
+          const newDeletedItems = prevDeletedItems.slice(0, -1);
+          if (newDeletedItems.length === 0) {
+            toast.dismiss();
+          }
+          return newDeletedItems;
+        }
+      }
+      return prevDeletedItems;
+    });
+  };
+
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       {/* Left column */}
@@ -148,6 +186,9 @@ export default function App() {
           setNewListName,
           setIsRenaming,
           setIsModalOpen,
+          deletedItems,
+          setDeletedItems,
+          toast,
         }}
       />
 
@@ -205,6 +246,7 @@ export default function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <Toaster />
     </div>
   );
 }
