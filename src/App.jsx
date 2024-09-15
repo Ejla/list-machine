@@ -3,6 +3,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 import { List } from "./components/List";
+import { Lists } from "./components/Lists";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 
@@ -196,24 +197,11 @@ export default function App() {
             Create New List
           </Button>
         </div>
-        <ScrollArea className="flex-1">
-          <div className="p-4">
-            {lists.map((list) => (
-              <Button
-                key={list.id}
-                variant={
-                  selectedList && selectedList.id === list.id
-                    ? "secondary"
-                    : "ghost"
-                }
-                className="w-full justify-start mb-2"
-                onClick={() => setSelectedList(list)}
-              >
-                {list.name}
-              </Button>
-            ))}
-          </div>
-        </ScrollArea>
+        <Lists 
+          lists={lists}
+          selectedList={selectedList}
+          setSelectedList={setSelectedList}
+        />
       </div>
 
       {/* Right column */}
