@@ -8,6 +8,7 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { ThemeProvider } from "./components/ThemeProvider"
 import { ModeToggle } from "./components/ModeToggle"
+import { X, Search } from "lucide-react";
 
 import {
   Dialog,
@@ -44,6 +45,7 @@ export default function App() {
   const [deletedItems, setDeletedItems] = useState([]);
   const { toast } = useToast();
   const [shouldFocusAddItem, setShouldFocusAddItem] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -220,14 +222,32 @@ export default function App() {
             <h1 className="text-2xl font-bold">ListMachine</h1>
             <ModeToggle />
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="w-full">
+          <Button onClick={() => setIsModalOpen(true)} className="w-full mb-4">
             Create New List
           </Button>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search lists..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-8"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
         <Lists 
           lists={lists}
           selectedList={selectedList}
           setSelectedList={setSelectedList}
+          searchQuery={searchQuery}
         />
       </div>
 

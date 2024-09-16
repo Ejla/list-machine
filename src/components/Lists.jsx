@@ -4,9 +4,13 @@ import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Pin } from "lucide-react";
 
-export const Lists = ({ lists, selectedList, setSelectedList }) => {
-  const pinnedLists = lists.filter(list => list.isPinned);
-  const unpinnedLists = lists.filter(list => !list.isPinned);
+export const Lists = ({ lists, selectedList, setSelectedList, searchQuery }) => {
+  const filteredLists = lists.filter(list => 
+    list.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const pinnedLists = filteredLists.filter(list => list.isPinned);
+  const unpinnedLists = filteredLists.filter(list => !list.isPinned);
 
   const renderListButton = (list) => (
     <Button
@@ -50,4 +54,5 @@ Lists.propTypes = {
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   }),
   setSelectedList: PropTypes.func.isRequired,
+  searchQuery: PropTypes.string.isRequired,
 };
