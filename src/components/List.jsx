@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
 import PropTypes from "prop-types";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Pin, PinOff, Pencil, Trash2 } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -21,6 +21,7 @@ export const List = ({
   setLists,
   selectedList,
   setSelectedList,
+  handlePinList,
   shouldFocusAddItem,
   setShouldFocusAddItem,
   setIsDeleteConfirmOpen,
@@ -222,9 +223,24 @@ export const List = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={openRenameModal}>
+                    <Pencil className="mr-2 h-4 w-4" />
                     Rename
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePinList(selectedList.id)}>
+                    {selectedList.isPinned ? (
+                      <>
+                        <PinOff className="mr-2 h-4 w-4" />
+                        Unpin List
+                      </>
+                    ) : (
+                      <>
+                        <Pin className="mr-2 h-4 w-4" />
+                        Pin List
+                      </>
+                    )}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setIsDeleteConfirmOpen(true)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Delete List
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -286,4 +302,5 @@ List.propTypes = {
   toast: PropTypes.func.isRequired,
   shouldFocusAddItem: PropTypes.bool.isRequired,
   setShouldFocusAddItem: PropTypes.func.isRequired,
+  handlePinList: PropTypes.func.isRequired,
 };

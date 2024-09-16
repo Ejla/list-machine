@@ -52,6 +52,19 @@ export default function App() {
     })
   );
 
+  const handlePinList = useCallback((listId) => {
+    setLists(prevLists => {
+      const updatedLists = prevLists.map(list => 
+        list.id === listId ? { ...list, isPinned: !list.isPinned } : list
+      );
+      // Update selectedList if it's the one being pinned/unpinned
+      if (selectedList && selectedList.id === listId) {
+        setSelectedList(updatedLists.find(list => list.id === listId));
+      }
+      return updatedLists;
+    });
+  }, [selectedList]);
+
   useEffect(() => {
     const storedLists = localStorage.getItem("lists");
     const storedSelectedListId = localStorage.getItem("selectedListId");
@@ -230,7 +243,7 @@ export default function App() {
             setLists,
             selectedList,
             setSelectedList,
-            setIsDeleteConfirmOpen,
+            handlePinList,
             newItem,
             setNewItem,
             setNewListName,
