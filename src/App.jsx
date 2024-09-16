@@ -47,6 +47,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [listToDelete, setListToDelete] = useState(null);
   const [newListCreated, setNewListCreated] = useState(false);
+  const [isEditingMultiple, setIsEditingMultiple] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -330,6 +331,8 @@ export default function App() {
             handleDeleteList,
             newListCreated,
             setNewListCreated,
+            isEditingMultiple,
+            setIsEditingMultiple,
           }}
         />
       </DndContext>

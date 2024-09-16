@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import PropTypes from "prop-types";
-import { MoreVertical, Pin, PinOff, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pin, PinOff, Pencil, Trash2, SquareStack, CheckSquare, Square, X } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -13,9 +13,21 @@ import {
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { Checkbox } from "./ui/checkbox";
 
 import { ListItem } from "./ListItem";
 import { ListPDFExport } from "./ListPDF";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 export const List = ({
   lists,
@@ -35,10 +47,15 @@ export const List = ({
   newListCreated,
   setNewListCreated,
   handleDeleteList,
+  isEditingMultiple,
+  setIsEditingMultiple,
 }) => {
   const listItemsRef = useRef(null);
   const toastIdRef = useRef(null);
   const newItemInputRef = useRef(null);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   useEffect(() => {
     if (deletedItems.length > 0) {
@@ -211,6 +228,95 @@ export const List = ({
     }
   };
 
+  const handleSelectItem = (itemId) => {
+    setSelectedItems(prev => 
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedItems(selectedList.items.map(item => item.id));
+    } else {
+      setSelectedItems([]);
+    }
+  };
+
+  const isAllSelected = selectedList && selectedItems.length === selectedList.items.length;
+
+  const handleConfirmAction = () => {
+    if (confirmAction) {
+      confirmAction.action();
+      setIsConfirmDialogOpen(false);
+      setConfirmAction(null);
+    }
+  };
+
+  const handleDeleteSelected = () => {
+    setConfirmAction({
+      title: "Delete Selected Items",
+      description: `Are you sure you want to delete ${selectedItems.length} item(s)?`,
+      action: () => {
+        const updatedItems = selectedList.items.filter(item => !selectedItems.includes(item.id));
+        updateList(updatedItems);
+        toast({
+          title: `${selectedItems.length} item(s) deleted successfully`,
+          duration: 3000,
+        });
+        setSelectedItems([]);
+      }
+    });
+    setIsConfirmDialogOpen(true);
+  };
+
+  const handleMarkAsDone = () => {
+    setConfirmAction({
+      title: "Mark Items as Done",
+      description: `Are you sure you want to mark ${selectedItems.length} item(s) as done?`,
+      action: () => {
+        const updatedItems = selectedList.items.map(item => 
+          selectedItems.includes(item.id) ? { ...item, done: true } : item
+        );
+        updateList(updatedItems);
+        toast({
+          title: `${selectedItems.length} item(s) marked as done`,
+          duration: 3000,
+        });
+        setSelectedItems([]);
+      }
+    });
+    setIsConfirmDialogOpen(true);
+  };
+
+  const handleMarkAsNotDone = () => {
+    setConfirmAction({
+      title: "Mark Items as Not Done",
+      description: `Are you sure you want to mark ${selectedItems.length} item(s) as not done?`,
+      action: () => {
+        const updatedItems = selectedList.items.map(item => 
+          selectedItems.includes(item.id) ? { ...item, done: false } : item
+        );
+        updateList(updatedItems);
+        toast({
+          title: `${selectedItems.length} item(s) marked as not done`,
+          duration: 3000,
+        });
+        setSelectedItems([]);
+      }
+    });
+    setIsConfirmDialogOpen(true);
+  };
+
+  const updateList = (updatedItems) => {
+    const updatedList = { ...selectedList, items: updatedItems };
+    setSelectedList(updatedList);
+    setLists(prevLists => 
+      prevLists.map(list => 
+        list.id === selectedList.id ? updatedList : list
+      )
+    );
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {selectedList && (
@@ -223,49 +329,89 @@ export const List = ({
                   Created {formatDistanceToNow(new Date(selectedList.createdAt || Date.now()), { addSuffix: true })}
                 </span>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={openRenameModal}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Rename
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handlePinList(selectedList.id)}>
-                    {selectedList.isPinned ? (
-                      <>
-                        <PinOff className="mr-2 h-4 w-4" />
-                        Unpin List
-                      </>
-                    ) : (
-                      <>
-                        <Pin className="mr-2 h-4 w-4" />
-                        Pin List
-                      </>
-                    )}
-                  </DropdownMenuItem>
-                  <ListPDFExport list={selectedList} />
-                  <DropdownMenuItem onClick={() => handleDeleteList(selectedList.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete List
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isEditingMultiple ? (
+                <Button onClick={() => setIsEditingMultiple(false)}>
+                  Done Editing
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={openRenameModal}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handlePinList(selectedList.id)}>
+                      {selectedList.isPinned ? (
+                        <>
+                          <PinOff className="mr-2 h-4 w-4" />
+                          Unpin List
+                        </>
+                      ) : (
+                        <>
+                          <Pin className="mr-2 h-4 w-4" />
+                          Pin List
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsEditingMultiple(true)}>
+                      <SquareStack className="mr-2 h-4 w-4" />
+                      Edit Multiple Items
+                    </DropdownMenuItem>
+                    <ListPDFExport list={selectedList} />
+                    <DropdownMenuItem onClick={() => handleDeleteList(selectedList.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete List
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
-            <div className="flex gap-2">
-              <Input
-                ref={newItemInputRef}
-                value={newItem}
-                onChange={(e) => setNewItem(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Add new item"
-                className="mb-4"
-              />
-              <Button onClick={handleAddItem}>Add</Button>
-            </div>
+            {isEditingMultiple ? (
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all"
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <label
+                    htmlFor="select-all"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Select All
+                  </label>
+                </div>
+                <Button onClick={handleDeleteSelected} disabled={selectedItems.length === 0}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Selected
+                </Button>
+                <Button onClick={handleMarkAsDone} disabled={selectedItems.length === 0}>
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Mark as Done
+                </Button>
+                <Button onClick={handleMarkAsNotDone} disabled={selectedItems.length === 0}>
+                  <Square className="mr-2 h-4 w-4" />
+                  Mark as Not Done
+                </Button>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Input
+                  ref={newItemInputRef}
+                  value={newItem}
+                  onChange={(e) => setNewItem(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Add new item"
+                  className="mb-4"
+                />
+                <Button onClick={handleAddItem}>Add</Button>
+              </div>
+            )}
           </div>
           <div ref={listItemsRef} className="flex-1 overflow-y-auto p-4">
             <SortableContext 
@@ -281,12 +427,29 @@ export const List = ({
                   onEdit={handleEditItem}
                   onDelete={handleDeleteItem}
                   toast={toast}
+                  isEditingMultiple={isEditingMultiple}
+                  isSelected={selectedItems.includes(item.id)}
+                  onSelect={handleSelectItem}
                 />
               ))}
             </SortableContext>
           </div>
         </>
       )}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirmAction?.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setIsConfirmDialogOpen(false)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAction}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
@@ -314,4 +477,6 @@ List.propTypes = {
   newListCreated: PropTypes.bool.isRequired,
   setNewListCreated: PropTypes.func.isRequired,
   handleDeleteList: PropTypes.func.isRequired,
+  isEditingMultiple: PropTypes.bool.isRequired,
+  setIsEditingMultiple: PropTypes.func.isRequired,
 };

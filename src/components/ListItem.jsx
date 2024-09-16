@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { MoreVertical, GripVertical, Circle, CheckCircle, Check } from "lucide-react";
+import { Checkbox } from "./ui/checkbox";
 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -24,7 +25,17 @@ import {
 } from "./ui/alert-dialog";
 
 
-export const ListItem = ({ id, item, onToggle, onEdit, onDelete, toast }) => {
+export const ListItem = ({ 
+  id, 
+  item, 
+  onToggle, 
+  onEdit, 
+  onDelete, 
+  toast, 
+  isEditingMultiple,
+  isSelected,
+  onSelect
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(item.text);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -104,15 +115,23 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete, toast }) => {
         className="flex items-center justify-between bg-secondary p-2 rounded mb-2"
       >
         <div className="flex items-center space-x-2 flex-grow">
-          <div {...listeners}>
-            <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" />
-          </div>
+          {isEditingMultiple ? (
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onSelect(id)}
+              className="mr-2"
+            />
+          ) : (
+            <div {...listeners}>
+              <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" />
+            </div>
+          )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => !isEditing && onToggle(item.id)}
-            className={`p-0 ${isEditing ? 'cursor-not-allowed opacity-50' : ''}`}
-            disabled={isEditing}
+            onClick={() => !isEditing && !isEditingMultiple && onToggle(item.id)}
+            className={`p-0 ${(isEditing || isEditingMultiple) ? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={isEditing || isEditingMultiple}
           >
             {item.done ? (
               <CheckCircle className="h-5 w-5" />
@@ -141,16 +160,16 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete, toast }) => {
             </div>
           ) : (
             <span
-              onClick={() => setIsEditing(true)}
+              onClick={() => !isEditingMultiple && setIsEditing(true)}
               className={`cursor-pointer ${
                 item.done ? "line-through text-muted-foreground" : ""
-              }`}
+              } ${isEditingMultiple ? 'pointer-events-none' : ''}`}
             >
               {item.text}
             </span>
           )}
         </div>
-        {!isEditing && (
+        {!isEditing && !isEditingMultiple && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
@@ -194,6 +213,9 @@ ListItem.propTypes = {
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   toast: PropTypes.func.isRequired,
+  isEditingMultiple: PropTypes.bool.isRequired,
+  isSelected: PropTypes.bool.isRequired,
+  onSelect: PropTypes.func.isRequired,
 };
 
 ListItem.displayName = "ListItem";
