@@ -23,8 +23,6 @@ export const List = ({
   selectedList,
   setSelectedList,
   handlePinList,
-  shouldFocusAddItem,
-  setShouldFocusAddItem,
   setIsDeleteConfirmOpen,
   newItem,
   setNewItem,
@@ -34,17 +32,13 @@ export const List = ({
   deletedItems,
   setDeletedItems,
   toast,
+  newListCreated,
+  setNewListCreated,
+  handleDeleteList,
 }) => {
   const listItemsRef = useRef(null);
-  const addItemInputRef = useRef(null);
   const toastIdRef = useRef(null);
-
-  useEffect(() => {
-    if (shouldFocusAddItem && addItemInputRef.current) {
-      addItemInputRef.current.focus();
-      setShouldFocusAddItem(false);
-    }
-  }, [shouldFocusAddItem, setShouldFocusAddItem]);
+  const newItemInputRef = useRef(null);
 
   useEffect(() => {
     if (deletedItems.length > 0) {
@@ -81,6 +75,19 @@ export const List = ({
       );
     }
   }, [selectedList, setSelectedList, setLists]);
+
+  useEffect(() => {
+    if (newListCreated) {
+      setNewListCreated(false);
+    }
+  }, [newListCreated, setNewListCreated]);
+
+  useEffect(() => {
+    if (newListCreated && newItemInputRef.current) {
+      newItemInputRef.current.focus();
+      setNewListCreated(false);  // Reset the flag
+    }
+  }, [newListCreated, setNewListCreated]);
 
   const handleAddItem = () => {
     if (newItem.trim() && selectedList) {
@@ -241,7 +248,7 @@ export const List = ({
                     )}
                   </DropdownMenuItem>
                   <ListPDFExport list={selectedList} />
-                  <DropdownMenuItem onClick={() => setIsDeleteConfirmOpen(true)}>
+                  <DropdownMenuItem onClick={() => handleDeleteList(selectedList.id)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete List
                   </DropdownMenuItem>
@@ -250,11 +257,12 @@ export const List = ({
             </div>
             <div className="flex gap-2">
               <Input
-                ref={addItemInputRef}
+                ref={newItemInputRef}
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Add new item"
+                className="mb-4"
               />
               <Button onClick={handleAddItem}>Add</Button>
             </div>
@@ -272,6 +280,7 @@ export const List = ({
                   onToggle={handleToggleItem}
                   onEdit={handleEditItem}
                   onDelete={handleDeleteItem}
+                  toast={toast}
                 />
               ))}
             </SortableContext>
@@ -302,7 +311,7 @@ List.propTypes = {
   deletedItems: PropTypes.array.isRequired,
   setDeletedItems: PropTypes.func.isRequired,
   toast: PropTypes.func.isRequired,
-  shouldFocusAddItem: PropTypes.bool.isRequired,
-  setShouldFocusAddItem: PropTypes.func.isRequired,
-  handlePinList: PropTypes.func.isRequired,
+  newListCreated: PropTypes.bool.isRequired,
+  setNewListCreated: PropTypes.func.isRequired,
+  handleDeleteList: PropTypes.func.isRequired,
 };

@@ -23,7 +23,8 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 
-export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
+
+export const ListItem = ({ id, item, onToggle, onEdit, onDelete, toast }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(item.text);
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -50,8 +51,23 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
   }, [isEditing]);
 
   const handleSave = () => {
-    onEdit(item.id, editedText);
-    setIsEditing(false);
+    if (editedText.trim().length > 0) {
+      onEdit(item.id, editedText.trim());
+      setIsEditing(false);
+    } else {
+      toast({
+        title: "Item text cannot be empty",
+        description: "Please enter at least one character.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const newValue = e.target.value;
+    if (newValue.trim().length > 0 || newValue === '') {
+      setEditedText(newValue);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -109,7 +125,7 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
               <Input
                 ref={inputRef}
                 value={editedText}
-                onChange={(e) => setEditedText(e.target.value)}
+                onChange={handleInputChange}
                 onKeyPress={(e) => e.key === "Enter" && handleSave()}
                 onBlur={handleCancelEdit}
                 className="flex-grow"
@@ -118,6 +134,7 @@ export const ListItem = ({ id, item, onToggle, onEdit, onDelete }) => {
                 ref={saveButtonRef}
                 size="sm" 
                 onClick={handleSave}
+                disabled={editedText.trim().length === 0}
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -176,6 +193,7 @@ ListItem.propTypes = {
   onToggle: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
+  toast: PropTypes.func.isRequired,
 };
 
 ListItem.displayName = "ListItem";

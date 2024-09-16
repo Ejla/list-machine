@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
@@ -44,8 +44,9 @@ export default function App() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [deletedItems, setDeletedItems] = useState([]);
   const { toast } = useToast();
-  const [shouldFocusAddItem, setShouldFocusAddItem] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [listToDelete, setListToDelete] = useState(null);
+  const [newListCreated, setNewListCreated] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -122,7 +123,7 @@ export default function App() {
       setSelectedList(newList);
       setNewListName("");
       setIsModalOpen(false);
-      setShouldFocusAddItem(true); // Set this to true when a new list is created
+      setNewListCreated(true);  // Set this to true when a new list is created
     }
   }, [newListName, lists, setLists, setSelectedList]);
 
@@ -147,14 +148,68 @@ export default function App() {
     }
   }, [isRenaming, handleRenameList, handleCreateList]);
 
-  const handleDeleteList = () => {
-    if (selectedList) {
-      const updatedLists = lists.filter((list) => list.id !== selectedList.id);
+  const handleDeleteList = useCallback((listId) => {
+    const listToDelete = lists.find(list => list.id === listId);
+    setListToDelete(listToDelete);
+    setIsDeleteConfirmOpen(true);
+  }, [lists]);
+
+  const confirmDeleteList = useCallback(() => {
+    if (listToDelete) {
+      const updatedLists = lists.filter(list => list.id !== listToDelete.id);
       setLists(updatedLists);
-      setSelectedList(updatedLists[0] || null);
+
+      let newSelectedList = null;
+
+      if (updatedLists.length === 0) {
+        // If we're deleting the last list
+        setSelectedList(null);
+        localStorage.removeItem('lists');
+        localStorage.removeItem('selectedListId');
+      } else if (selectedList && selectedList.id === listToDelete.id) {
+        const deletedListIndex = lists.findIndex(list => list.id === listToDelete.id);
+        const wasDeletedListPinned = listToDelete.isPinned;
+
+        if (wasDeletedListPinned) {
+          // If a pinned list was deleted
+          const olderPinnedList = updatedLists.slice(0, deletedListIndex).reverse().find(list => list.isPinned);
+          const newerPinnedList = updatedLists.slice(deletedListIndex).find(list => list.isPinned);
+          const newestUnpinnedList = updatedLists.filter(list => !list.isPinned).sort((a, b) => b.createdAt - a.createdAt)[0];
+
+          newSelectedList = olderPinnedList || newerPinnedList || newestUnpinnedList;
+        } else {
+          // If an unpinned list was deleted
+          const olderUnpinnedList = updatedLists.slice(0, deletedListIndex).reverse().find(list => !list.isPinned);
+          const newerUnpinnedList = updatedLists.slice(deletedListIndex).find(list => !list.isPinned);
+          const oldestPinnedList = updatedLists.filter(list => list.isPinned).sort((a, b) => a.createdAt - b.createdAt)[0];
+
+          newSelectedList = olderUnpinnedList || newerUnpinnedList || oldestPinnedList;
+        }
+
+        setSelectedList(newSelectedList || null);
+      }
+
+      // Update localStorage
+      if (updatedLists.length > 0) {
+        localStorage.setItem('lists', JSON.stringify(updatedLists));
+        if (selectedList && selectedList.id === listToDelete.id) {
+          localStorage.setItem('selectedListId', newSelectedList ? newSelectedList.id.toString() : '');
+        }
+      } else {
+        localStorage.removeItem('lists');
+        localStorage.removeItem('selectedListId');
+      }
+
       setIsDeleteConfirmOpen(false);
+      
+      toast({
+        title: `List "${listToDelete.name}" was deleted successfully`,
+        duration: 3000,
+      });
+      
+      setListToDelete(null);
     }
-  };
+  }, [listToDelete, lists, selectedList, setLists, setSelectedList, toast]);
 
   const handleUndoDelete = () => {
     setDeletedItems((prevDeletedItems) => {
@@ -272,14 +327,17 @@ export default function App() {
             deletedItems,
             setDeletedItems,
             toast,
-            shouldFocusAddItem,
-            setShouldFocusAddItem,
+            handleDeleteList,
+            newListCreated,
+            setNewListCreated,
           }}
         />
       </DndContext>
 
       {/* Modal for creating/renaming list */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        setIsModalOpen(open);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -319,18 +377,15 @@ export default function App() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Are you sure you want to delete this list?
+              Are you sure?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              list and all its items.
+              This action cannot be undone. This will permanently delete the list "{listToDelete?.name}" and all its items.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteList}>
-              Yes, delete list
-            </AlertDialogAction>
+            <AlertDialogCancel>No</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteList}>Yes, delete list</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
