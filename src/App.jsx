@@ -6,6 +6,8 @@ import { List } from "./components/List";
 import { Lists } from "./components/Lists";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import { ThemeProvider } from "./components/ThemeProvider"
+import { ModeToggle } from "./components/ModeToggle"
 
 import {
   Dialog,
@@ -196,11 +198,15 @@ export default function App() {
   };
 
   return (
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {/* Left column */}
       <div className="w-[300px] border-r border-border flex flex-col">
         <div className="flex-shrink-0 p-4 border-b">
-          <h1 className="text-2xl font-bold mb-4">ListMachine</h1>
+          <div className="flex justify-between items-center mb-4">
+            <h1 className="text-2xl font-bold">ListMachine</h1>
+            <ModeToggle />
+          </div>
           <Button onClick={() => setIsModalOpen(true)} className="w-full">
             Create New List
           </Button>
@@ -297,5 +303,7 @@ export default function App() {
       </AlertDialog>
       <Toaster />
     </div>
+    </ThemeProvider>
   );
+  
 }
