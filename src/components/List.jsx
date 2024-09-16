@@ -15,6 +15,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
 import { ListItem } from "./ListItem";
+import { ListPDFExport } from "./ListPDF";
 
 export const List = ({
   lists,
@@ -239,6 +240,7 @@ export const List = ({
                       </>
                     )}
                   </DropdownMenuItem>
+                  <ListPDFExport list={selectedList} />
                   <DropdownMenuItem onClick={() => setIsDeleteConfirmOpen(true)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete List
