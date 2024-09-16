@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import PropTypes from "prop-types";
-import { MoreVertical, Pin, PinOff, Pencil, Trash2, SquareStack, CheckSquare, Square, X } from "lucide-react";
+import { MoreVertical, Pin, PinOff, Pencil, Trash2, SquareStack, CheckSquare, Square, X, ListPlus, MoveVertical } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -14,6 +14,8 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Checkbox } from "./ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 import { ListItem } from "./ListItem";
 import { ListPDFExport } from "./ListPDF";
@@ -28,6 +30,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "./ui/alert-dialog";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "./ui/dialog";
 
 export const List = ({
   lists,
@@ -49,6 +59,7 @@ export const List = ({
   handleDeleteList,
   isEditingMultiple,
   setIsEditingMultiple,
+  onCreateNewList,
 }) => {
   const listItemsRef = useRef(null);
   const toastIdRef = useRef(null);
@@ -56,6 +67,11 @@ export const List = ({
   const [selectedItems, setSelectedItems] = useState([]);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [isNewListModalOpen, setIsNewListModalOpen] = useState(false);
+  const [newListWithSelectionName, setNewListWithSelectionName] = useState("");
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [moveOption, setMoveOption] = useState(null);
+  const [selectedMoveList, setSelectedMoveList] = useState(null);
 
   useEffect(() => {
     if (deletedItems.length > 0) {
@@ -307,6 +323,40 @@ export const List = ({
     setIsConfirmDialogOpen(true);
   };
 
+  const handleNewListWithSelection = () => {
+    setIsNewListModalOpen(true);
+  };
+
+  const handleCreateNewListWithSelection = () => {
+    if (newListWithSelectionName.trim()) {
+      const selectedItemsData = selectedList.items.filter(item => selectedItems.includes(item.id));
+      const newList = onCreateNewList(newListWithSelectionName.trim(), selectedItemsData);
+      
+      // Remove selected items from the current list
+      const updatedItems = selectedList.items.filter(item => !selectedItems.includes(item.id));
+      updateList(updatedItems);
+
+      setIsNewListModalOpen(false);
+      setNewListWithSelectionName("");
+      setSelectedItems([]);
+      setIsEditingMultiple(false);
+      setSelectedList(newList);  // Select the newly created list
+
+      toast({
+        title: `New list "${newListWithSelectionName}" created with ${selectedItemsData.length} item(s)`,
+        description: "Selected items have been moved to the new list.",
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCreateNewListWithSelection();
+    }
+  };
+
   const updateList = (updatedItems) => {
     const updatedList = { ...selectedList, items: updatedItems };
     setSelectedList(updatedList);
@@ -315,6 +365,79 @@ export const List = ({
         list.id === selectedList.id ? updatedList : list
       )
     );
+  };
+
+  const handleMove = () => {
+    setIsMoveModalOpen(true);
+  };
+
+  const handleConfirmMove = () => {
+    const itemsToMove = selectedList.items.filter(item => selectedItems.includes(item.id));
+    let updatedLists = [...lists];
+    let updatedCurrentList = { ...selectedList };
+    let targetListId = selectedList.id;
+    let shouldExitEditMultiple = false;
+
+    switch (moveOption) {
+      case 'top':
+        updatedCurrentList.items = [
+          ...itemsToMove,
+          ...updatedCurrentList.items.filter(item => !selectedItems.includes(item.id))
+        ];
+        break;
+      case 'bottom':
+        updatedCurrentList.items = [
+          ...updatedCurrentList.items.filter(item => !selectedItems.includes(item.id)),
+          ...itemsToMove
+        ];
+        break;
+      case 'another':
+        if (selectedMoveList) {
+          targetListId = selectedMoveList;
+          updatedLists = updatedLists.map(list => {
+            if (list.id === selectedMoveList) {
+              return { ...list, items: [...list.items, ...itemsToMove] };
+            }
+            if (list.id === selectedList.id) {
+              return { ...list, items: list.items.filter(item => !selectedItems.includes(item.id)) };
+            }
+            return list;
+          });
+          shouldExitEditMultiple = true;
+        }
+        break;
+    }
+
+    if (moveOption !== 'another') {
+      updatedLists = updatedLists.map(list => 
+        list.id === selectedList.id ? updatedCurrentList : list
+      );
+    }
+
+    setLists(updatedLists);
+    setSelectedList(updatedLists.find(list => list.id === targetListId));
+    
+    if (shouldExitEditMultiple) {
+      setSelectedItems([]);
+      setIsEditingMultiple(false);
+    } else {
+      // If moving within the same list, update selectedItems to reflect new positions
+      setSelectedItems(prevSelected => {
+        const updatedItems = updatedLists.find(list => list.id === targetListId).items;
+        return updatedItems
+          .filter(item => prevSelected.includes(item.id))
+          .map(item => item.id);
+      });
+    }
+
+    setIsMoveModalOpen(false);
+    setMoveOption(null);
+    setSelectedMoveList(null);
+
+    toast({
+      title: `${itemsToMove.length} item(s) moved successfully`,
+      duration: 3000,
+    });
   };
 
   return (
@@ -398,6 +521,14 @@ export const List = ({
                   <Square className="mr-2 h-4 w-4" />
                   Mark as Not Done
                 </Button>
+                <Button onClick={handleNewListWithSelection} disabled={selectedItems.length === 0}>
+                  <ListPlus className="mr-2 h-4 w-4" />
+                  New List with Selection
+                </Button>
+                <Button onClick={handleMove} disabled={selectedItems.length === 0}>
+                  <MoveVertical className="mr-2 h-4 w-4" />
+                  Move Selected
+                </Button>
               </div>
             ) : (
               <div className="flex gap-2">
@@ -450,27 +581,85 @@ export const List = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <Dialog open={isNewListModalOpen} onOpenChange={setIsNewListModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New List with Selection</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={newListWithSelectionName}
+            onChange={(e) => setNewListWithSelectionName(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="New List Name"
+            className="mt-4"
+          />
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsNewListModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreateNewListWithSelection} disabled={!newListWithSelectionName.trim()}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move Selected Items</DialogTitle>
+          </DialogHeader>
+          <RadioGroup onValueChange={setMoveOption} value={moveOption}>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="top" id="top" />
+              <label htmlFor="top">Move to Top</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="bottom" id="bottom" />
+              <label htmlFor="bottom">Move to Bottom</label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="another" id="another" />
+              <label htmlFor="another">Move to Another List</label>
+            </div>
+          </RadioGroup>
+          {moveOption === 'another' && (
+            <Select onValueChange={setSelectedMoveList} value={selectedMoveList}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a list" />
+              </SelectTrigger>
+              <SelectContent>
+                {lists.filter(list => list.id !== selectedList.id).map(list => (
+                  <SelectItem key={list.id} value={list.id}>{list.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMoveModalOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={handleConfirmMove} 
+              disabled={!moveOption || (moveOption === 'another' && !selectedMoveList)}
+            >
+              Move
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 List.displayName = "List";
 List.propTypes = {
+  lists: PropTypes.array.isRequired,
+  setLists: PropTypes.func.isRequired,
   selectedList: PropTypes.object,
-  setSelectedList: PropTypes.func,
-  lists: PropTypes.array,
-  setLists: PropTypes.func,
-  openRenameModal: PropTypes.func,
-  setIsDeleteConfirmOpen: PropTypes.func,
-  newItem: PropTypes.string,
-  setNewItem: PropTypes.func,
-  handleAddItem: PropTypes.func,
-  handleToggleItem: PropTypes.func,
-  handleEditItem: PropTypes.func,
-  handleDeleteItem: PropTypes.func,
-  setIsModalOpen: PropTypes.func,
-  setNewListName: PropTypes.func,
-  setIsRenaming: PropTypes.func,
+  setSelectedList: PropTypes.func.isRequired,
+  handlePinList: PropTypes.func.isRequired,
+  setIsDeleteConfirmOpen: PropTypes.func.isRequired,
+  newItem: PropTypes.string.isRequired,
+  setNewItem: PropTypes.func.isRequired,
+  setNewListName: PropTypes.func.isRequired,
+  setIsRenaming: PropTypes.func.isRequired,
+  setIsModalOpen: PropTypes.func.isRequired,
   deletedItems: PropTypes.array.isRequired,
   setDeletedItems: PropTypes.func.isRequired,
   toast: PropTypes.func.isRequired,
@@ -479,4 +668,5 @@ List.propTypes = {
   handleDeleteList: PropTypes.func.isRequired,
   isEditingMultiple: PropTypes.bool.isRequired,
   setIsEditingMultiple: PropTypes.func.isRequired,
+  onCreateNewList: PropTypes.func.isRequired,
 };

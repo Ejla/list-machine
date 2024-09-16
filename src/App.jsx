@@ -268,6 +268,17 @@ export default function App() {
     }
   };
 
+  const handleCreateNewListWithSelection = useCallback((newListName, selectedItems) => {
+    const newList = {
+      id: Date.now(),
+      name: newListName,
+      items: selectedItems,
+      createdAt: Date.now(),
+    };
+    setLists(prevLists => [newList, ...prevLists]);
+    return newList;  // Return the new list
+  }, []);
+
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -320,6 +331,7 @@ export default function App() {
             selectedList,
             setSelectedList,
             handlePinList,
+            setIsDeleteConfirmOpen,
             newItem,
             setNewItem,
             setNewListName,
@@ -328,11 +340,12 @@ export default function App() {
             deletedItems,
             setDeletedItems,
             toast,
-            handleDeleteList,
             newListCreated,
             setNewListCreated,
+            handleDeleteList,
             isEditingMultiple,
             setIsEditingMultiple,
+            onCreateNewList: handleCreateNewListWithSelection,
           }}
         />
       </DndContext>
