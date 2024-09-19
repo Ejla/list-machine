@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { ChevronLeft } from "lucide-react";
 
 import { List } from "./components/List";
 import { Lists } from "./components/Lists";
@@ -48,6 +49,8 @@ export default function App() {
   const [listToDelete, setListToDelete] = useState(null);
   const [newListCreated, setNewListCreated] = useState(false);
   const [isEditingMultiple, setIsEditingMultiple] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);  // Default to true
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -279,11 +282,39 @@ export default function App() {
     return newList;  // Return the new list
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      const newIsMobileView = window.innerWidth <= 600;
+      setIsMobileView(newIsMobileView);
+      setShowSidebar(!newIsMobileView);  // Show sidebar on desktop, hide on mobile
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleListSelect = (list) => {
+    setSelectedList(list);
+    if (isMobileView) {
+      setShowSidebar(false);
+    }
+  };
+
+  const handleBackButton = () => {
+    setShowSidebar(true);
+  };
+
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {/* Left column */}
-      <div className="w-[300px] border-r border-border flex flex-col">
+      {/* Sidebar */}
+      <div className={`
+        ${isMobileView ? 'fixed inset-y-0 left-0 w-full' : 'w-[300px] flex-shrink-0'}
+        ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+        transition-transform duration-300 ease-in-out
+        border-r border-border flex flex-col
+        z-20
+      `}>
         <div className="flex-shrink-0 p-4 border-b">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-2xl font-bold">ListMachine</h1>
@@ -313,41 +344,57 @@ export default function App() {
         <Lists 
           lists={lists}
           selectedList={selectedList}
-          setSelectedList={setSelectedList}
+          setSelectedList={handleListSelect}
           searchQuery={searchQuery}
         />
       </div>
 
-      {/* Right column */}
+      {/* List */}
       <DndContext 
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <List
-          {...{
-            lists,
-            setLists,
-            selectedList,
-            setSelectedList,
-            handlePinList,
-            setIsDeleteConfirmOpen,
-            newItem,
-            setNewItem,
-            setNewListName,
-            setIsRenaming,
-            setIsModalOpen,
-            deletedItems,
-            setDeletedItems,
-            toast,
-            newListCreated,
-            setNewListCreated,
-            handleDeleteList,
-            isEditingMultiple,
-            setIsEditingMultiple,
-            onCreateNewList: handleCreateNewListWithSelection,
-          }}
-        />
+        <div className={`
+          flex-grow
+          ${isMobileView && showSidebar ? 'translate-x-full' : 'translate-x-0'}
+          transition-transform duration-300 ease-in-out
+          flex flex-col
+        `}>
+          {isMobileView && (
+            <button
+              onClick={handleBackButton}
+              className="p-4 flex items-center text-sm font-medium"
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back to Lists
+            </button>
+          )}
+          <List
+            {...{
+              lists,
+              setLists,
+              selectedList,
+              setSelectedList,
+              handlePinList,
+              setIsDeleteConfirmOpen,
+              newItem,
+              setNewItem,
+              setNewListName,
+              setIsRenaming,
+              setIsModalOpen,
+              deletedItems,
+              setDeletedItems,
+              toast,
+              newListCreated,
+              setNewListCreated,
+              handleDeleteList,
+              isEditingMultiple,
+              setIsEditingMultiple,
+              onCreateNewList: handleCreateNewListWithSelection,
+            }}
+          />
+        </div>
       </DndContext>
 
       {/* Modal for creating/renaming list */}
