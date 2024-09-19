@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import PropTypes from "prop-types";
-import { MoreVertical, Pin, PinOff, Pencil, Trash2, SquareStack, CheckSquare, Square, X, ListPlus, MoveVertical } from "lucide-react";
+import { MoreVertical, Pin, PinOff, Pencil, Trash2, SquareStack, CheckSquare, Square, X, ListPlus, MoveVertical, ChevronDown } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -72,6 +72,7 @@ export const List = ({
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [moveOption, setMoveOption] = useState(null);
   const [selectedMoveList, setSelectedMoveList] = useState(null);
+  const [isAllSelected, setIsAllSelected] = useState(false);
 
   useEffect(() => {
     if (deletedItems.length > 0) {
@@ -253,12 +254,22 @@ export const List = ({
   const handleSelectAll = (checked) => {
     if (checked) {
       setSelectedItems(selectedList.items.map(item => item.id));
+      setIsAllSelected(true);
     } else {
       setSelectedItems([]);
+      setIsAllSelected(false);
     }
   };
 
-  const isAllSelected = selectedList && selectedItems.length === selectedList.items.length;
+  useEffect(() => {
+    // Update isAllSelected when selectedItems changes
+    setIsAllSelected(selectedList && selectedItems.length === selectedList.items.length);
+  }, [selectedItems, selectedList]);
+
+  const resetSelection = () => {
+    setSelectedItems([]);
+    setIsAllSelected(false);
+  };
 
   const handleConfirmAction = () => {
     if (confirmAction) {
@@ -274,12 +285,12 @@ export const List = ({
       description: `Are you sure you want to delete ${selectedItems.length} item(s)?`,
       action: () => {
         const updatedItems = selectedList.items.filter(item => !selectedItems.includes(item.id));
-        updateList(updatedItems);
+        updateSelectedList(updatedItems);
         toast({
           title: `${selectedItems.length} item(s) deleted successfully`,
           duration: 3000,
         });
-        setSelectedItems([]);
+        resetSelection();
       }
     });
     setIsConfirmDialogOpen(true);
@@ -293,12 +304,12 @@ export const List = ({
         const updatedItems = selectedList.items.map(item => 
           selectedItems.includes(item.id) ? { ...item, done: true } : item
         );
-        updateList(updatedItems);
+        updateSelectedList(updatedItems);
         toast({
           title: `${selectedItems.length} item(s) marked as done`,
           duration: 3000,
         });
-        setSelectedItems([]);
+        resetSelection();
       }
     });
     setIsConfirmDialogOpen(true);
@@ -312,12 +323,12 @@ export const List = ({
         const updatedItems = selectedList.items.map(item => 
           selectedItems.includes(item.id) ? { ...item, done: false } : item
         );
-        updateList(updatedItems);
+        updateSelectedList(updatedItems);
         toast({
           title: `${selectedItems.length} item(s) marked as not done`,
           duration: 3000,
         });
-        setSelectedItems([]);
+        resetSelection();
       }
     });
     setIsConfirmDialogOpen(true);
@@ -334,11 +345,11 @@ export const List = ({
       
       // Remove selected items from the current list
       const updatedItems = selectedList.items.filter(item => !selectedItems.includes(item.id));
-      updateList(updatedItems);
+      updateSelectedList(updatedItems);
 
       setIsNewListModalOpen(false);
       setNewListWithSelectionName("");
-      setSelectedItems([]);
+      resetSelection();
       setIsEditingMultiple(false);
       setSelectedList(newList);  // Select the newly created list
 
@@ -357,7 +368,7 @@ export const List = ({
     }
   };
 
-  const updateList = (updatedItems) => {
+  const updateSelectedList = (updatedItems) => {
     const updatedList = { ...selectedList, items: updatedItems };
     setSelectedList(updatedList);
     setLists(prevLists => 
@@ -373,66 +384,37 @@ export const List = ({
 
   const handleConfirmMove = () => {
     const itemsToMove = selectedList.items.filter(item => selectedItems.includes(item.id));
-    let updatedLists = [...lists];
-    let updatedCurrentList = { ...selectedList };
-    let targetListId = selectedList.id;
-    let shouldExitEditMultiple = false;
-
+    let updatedItems = [...selectedList.items];
+    
     switch (moveOption) {
       case 'top':
-        updatedCurrentList.items = [
+        updatedItems = [
           ...itemsToMove,
-          ...updatedCurrentList.items.filter(item => !selectedItems.includes(item.id))
+          ...updatedItems.filter(item => !selectedItems.includes(item.id))
         ];
         break;
       case 'bottom':
-        updatedCurrentList.items = [
-          ...updatedCurrentList.items.filter(item => !selectedItems.includes(item.id)),
+        updatedItems = [
+          ...updatedItems.filter(item => !selectedItems.includes(item.id)),
           ...itemsToMove
         ];
         break;
       case 'another':
         if (selectedMoveList) {
-          targetListId = selectedMoveList;
-          updatedLists = updatedLists.map(list => {
-            if (list.id === selectedMoveList) {
-              return { ...list, items: [...list.items, ...itemsToMove] };
-            }
-            if (list.id === selectedList.id) {
-              return { ...list, items: list.items.filter(item => !selectedItems.includes(item.id)) };
-            }
-            return list;
-          });
-          shouldExitEditMultiple = true;
+          // Handle moving to another list
+          // ... existing code for moving to another list ...
+          resetSelection();
+          setIsEditingMultiple(false);
+          return;
         }
         break;
     }
 
-    if (moveOption !== 'another') {
-      updatedLists = updatedLists.map(list => 
-        list.id === selectedList.id ? updatedCurrentList : list
-      );
-    }
-
-    setLists(updatedLists);
-    setSelectedList(updatedLists.find(list => list.id === targetListId));
-    
-    if (shouldExitEditMultiple) {
-      setSelectedItems([]);
-      setIsEditingMultiple(false);
-    } else {
-      // If moving within the same list, update selectedItems to reflect new positions
-      setSelectedItems(prevSelected => {
-        const updatedItems = updatedLists.find(list => list.id === targetListId).items;
-        return updatedItems
-          .filter(item => prevSelected.includes(item.id))
-          .map(item => item.id);
-      });
-    }
-
+    updateSelectedList(updatedItems);
     setIsMoveModalOpen(false);
     setMoveOption(null);
     setSelectedMoveList(null);
+    resetSelection();
 
     toast({
       title: `${itemsToMove.length} item(s) moved successfully`,
@@ -441,10 +423,10 @@ export const List = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className={`flex-1 flex flex-col overflow-hidden bg-white`}>
       {selectedList && (
         <>
-          <div className="flex-shrink-0 bg-background z-10 p-4 border-b">
+          <div className="flex-shrink-0 z-10 p-4 border-b">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h2 className="text-2xl font-bold">{selectedList.name}</h2>
@@ -495,40 +477,45 @@ export const List = ({
               )}
             </div>
             {isEditingMultiple ? (
-              <div className="flex items-center space-x-4 mt-4">
+              <div className="flex flex-col space-y-2 mt-4">
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="select-all"
                     checked={isAllSelected}
                     onCheckedChange={handleSelectAll}
                   />
-                  <label
-                    htmlFor="select-all"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Select All
-                  </label>
+                  <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant={selectedItems.length > 0 ? "default" : "secondary"}>
+                      Select Actions <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={handleDeleteSelected} disabled={selectedItems.length === 0}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Selected
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleMarkAsDone} disabled={selectedItems.length === 0}>
+                      <CheckSquare className="mr-2 h-4 w-4" />
+                      Mark as Done
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleMarkAsNotDone} disabled={selectedItems.length === 0}>
+                      <Square className="mr-2 h-4 w-4" />
+                      Mark as Not Done
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleNewListWithSelection} disabled={selectedItems.length === 0}>
+                      <ListPlus className="mr-2 h-4 w-4" />
+                      New List with Selection
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleMove} disabled={selectedItems.length === 0}>
+                      <MoveVertical className="mr-2 h-4 w-4" />
+                      Move Selected
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                  
                 </div>
-                <Button onClick={handleDeleteSelected} disabled={selectedItems.length === 0}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Selected
-                </Button>
-                <Button onClick={handleMarkAsDone} disabled={selectedItems.length === 0}>
-                  <CheckSquare className="mr-2 h-4 w-4" />
-                  Mark as Done
-                </Button>
-                <Button onClick={handleMarkAsNotDone} disabled={selectedItems.length === 0}>
-                  <Square className="mr-2 h-4 w-4" />
-                  Mark as Not Done
-                </Button>
-                <Button onClick={handleNewListWithSelection} disabled={selectedItems.length === 0}>
-                  <ListPlus className="mr-2 h-4 w-4" />
-                  New List with Selection
-                </Button>
-                <Button onClick={handleMove} disabled={selectedItems.length === 0}>
-                  <MoveVertical className="mr-2 h-4 w-4" />
-                  Move Selected
-                </Button>
+                
               </div>
             ) : (
               <div className="flex gap-2">

@@ -112,7 +112,7 @@ export const ListItem = ({
         ref={setNodeRef}
         style={style}
         {...attributes}
-        className="flex items-center justify-between bg-secondary p-2 rounded mb-2"
+        className={`flex items-center justify-between ${isEditingMultiple ? 'bg-amber-50' : 'bg-gray-50'} p-2 rounded mb-2`}
       >
         <div className="flex items-center space-x-2 flex-grow">
           {isEditingMultiple ? (

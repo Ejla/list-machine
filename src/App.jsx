@@ -312,7 +312,7 @@ export default function App() {
         ${isMobileView ? 'fixed inset-y-0 left-0 w-full' : 'w-[300px] flex-shrink-0'}
         ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
         transition-transform duration-300 ease-in-out
-        border-r border-border flex flex-col
+        border-r border-border flex flex-col bg-white
         z-20
       `}>
         <div className="flex-shrink-0 p-4 border-b">
