@@ -423,7 +423,7 @@ export const List = ({
   };
 
   return (
-    <div className={`flex-1 flex flex-col overflow-hidden bg-white`}>
+    <div className={`flex-1 flex flex-col overflow-hidden`}>
       {selectedList && (
         <>
           <div className="flex-shrink-0 z-10 p-4 border-b">
