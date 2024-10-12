@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { MoreVertical, Pin, PinOff, Pencil, Trash2, SquareStack, CheckSquare, Square, X, ListPlus, MoveVertical, ChevronDown } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { formatDistanceToNow } from 'date-fns';
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
 
 import {
   DropdownMenu,
@@ -73,6 +74,25 @@ export const List = ({
   const [moveOption, setMoveOption] = useState(null);
   const [selectedMoveList, setSelectedMoveList] = useState(null);
   const [isAllSelected, setIsAllSelected] = useState(false);
+
+  // Fetch data from the API using Tanstack Query
+  const { data, error, isLoading } = useQuery({
+    queryKey: ['listData'], // Unique key for the query
+    queryFn: async () => {
+      const response = await fetch('http://localhost:3000/lists');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return await response.json();
+    },
+  });
+
+  // Set the lists state with the fetched data
+  const fetchedLists = (data?.list_items ?? []).map(item => ({
+    id: item.id,
+    text: item.name || 'No Name',
+    done: item.done || false,
+  }));
 
   useEffect(() => {
     if (deletedItems.length > 0) {
@@ -422,16 +442,20 @@ export const List = ({
     });
   };
 
+  // Handle loading and error states
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>An error has occurred: {error.message}</div>;
+
   return (
     <div className={`flex-1 flex flex-col overflow-hidden`}>
-      {selectedList && (
+      {data && (
         <>
           <div className="flex-shrink-0 z-10 p-4 border-b">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <h2 className="text-2xl font-bold">{selectedList.name}</h2>
+                <h2 className="text-2xl font-bold">{data.name}</h2>
                 <span className="text-xs text-muted-foreground">
-                  Created {formatDistanceToNow(new Date(selectedList.createdAt || Date.now()), { addSuffix: true })}
+                  Created {data.created_at ? formatDistanceToNow(new Date(data.created_at), { addSuffix: true }) : '-'}
                 </span>
               </div>
               {isEditingMultiple ? (
@@ -533,10 +557,10 @@ export const List = ({
           </div>
           <div ref={listItemsRef} className="flex-1 overflow-y-auto p-4">
             <SortableContext 
-              items={selectedList.items.map(item => item.id)}
+              items={fetchedLists.map(item => item.id)}
               strategy={verticalListSortingStrategy}
             >
-              {selectedList.items.map((item) => (
+              {fetchedLists.map((item) => (
                 <ListItem
                   key={item.id}
                   id={item.id}

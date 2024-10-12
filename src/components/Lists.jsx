@@ -3,8 +3,22 @@ import PropTypes from 'prop-types';
 import { ScrollArea } from "./ui/scroll-area";
 import { Button } from "./ui/button";
 import { Pin } from "lucide-react";
+import { useQuery } from '@tanstack/react-query';
 
-export const Lists = ({ lists, selectedList, setSelectedList, searchQuery }) => {
+export const Lists = ({ selectedList, setSelectedList, searchQuery }) => {
+  const { data: lists = [], error, isLoading } = useQuery({
+    queryKey: ['lists'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:3000/lists');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return await response.json();
+    },
+  });
+
+  console.log({ lists});
+
   const filteredLists = lists.filter(list => 
     list.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -22,6 +36,10 @@ export const Lists = ({ lists, selectedList, setSelectedList, searchQuery }) => 
       {list.name}
     </Button>
   );
+
+  // Handle loading and error states
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>An error has occurred: {error.message}</div>;
 
   return (
     <ScrollArea className="flex-1">
