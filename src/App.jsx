@@ -61,7 +61,7 @@ export default function App() {
 
   const handlePinList = useCallback((listId) => {
     setLists(prevLists => {
-      const updatedLists = prevLists.map(list => 
+      const updatedLists = prevLists.map(list =>
         list.id === listId ? { ...list, isPinned: !list.isPinned } : list
       );
       // Update selectedList if it's the one being pinned/unpinned
@@ -205,12 +205,12 @@ export default function App() {
       }
 
       setIsDeleteConfirmOpen(false);
-      
+
       toast({
         title: `List "${listToDelete.name}" was deleted successfully`,
         duration: 3000,
       });
-      
+
       setListToDelete(null);
     }
   }, [listToDelete, lists, selectedList, setLists, setSelectedList, toast]);
@@ -224,19 +224,19 @@ export default function App() {
             const updatedLists = prevLists.map((list) =>
               list.id === selectedList.id
                 ? {
-                    ...list,
-                    items: [
-                      ...list.items.slice(0, lastDeletedItem.index),
-                      lastDeletedItem.item,
-                      ...list.items.slice(lastDeletedItem.index),
-                    ],
-                  }
+                  ...list,
+                  items: [
+                    ...list.items.slice(0, lastDeletedItem.index),
+                    lastDeletedItem.item,
+                    ...list.items.slice(lastDeletedItem.index),
+                  ],
+                }
                 : list
             );
             setSelectedList(updatedLists.find((list) => list.id === selectedList.id));
             return updatedLists;
           });
-          
+
           const newDeletedItems = prevDeletedItems.slice(0, -1);
           if (newDeletedItems.length === 0) {
             toast.dismiss();
@@ -259,13 +259,13 @@ export default function App() {
       const updatedList = { ...selectedList, items: newItems };
 
       setSelectedList(updatedList);
-      setLists(prevLists => 
-        prevLists.map(list => 
+      setLists(prevLists =>
+        prevLists.map(list =>
           list.id === selectedList.id ? updatedList : list
         )
       );
 
-      localStorage.setItem('lists', JSON.stringify(lists.map(list => 
+      localStorage.setItem('lists', JSON.stringify(lists.map(list =>
         list.id === selectedList.id ? updatedList : list
       )));
     }
@@ -306,155 +306,154 @@ export default function App() {
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
-      {/* Sidebar */}
-      <div className={`
-        ${isMobileView ? 'fixed inset-y-0 left-0 w-full' : 'w-[300px] flex-shrink-0'}
-        ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
-        transition-transform duration-300 ease-in-out
-        border-r border-border flex flex-col
-        z-20
-      `}>
-        <div className="flex-shrink-0 p-4 border-b">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl font-bold">ListMachine</h1>
-            <ModeToggle />
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
+        {/* Sidebar */}
+        <div className={`
+            ${isMobileView ? 'fixed inset-y-0 left-0 w-full' : 'w-[300px] flex-shrink-0'}
+            ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
+            transition-transform duration-300 ease-in-out
+            border-r border-border flex flex-col
+            z-20
+          `}>
+          <div className="flex-shrink-0 p-4 border-b">
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold">ListMachine</h1>
+              <ModeToggle />
+            </div>
+            <Button onClick={() => setIsModalOpen(true)} className="w-full mb-4">
+              Create New List
+            </Button>
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search lists..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-8"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="w-full mb-4">
-            Create New List
-          </Button>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search lists..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-8"
-            />
-            {searchQuery && (
+          <Lists
+            lists={lists}
+            selectedList={selectedList}
+            setSelectedList={handleListSelect}
+            searchQuery={searchQuery}
+          />
+        </div>
+
+        {/* List */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className={`
+              flex-grow
+              ${isMobileView && showSidebar ? 'translate-x-full' : 'translate-x-0'}
+              transition-transform duration-300 ease-in-out
+              flex flex-col
+            `}>
+            {isMobileView && (
               <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={handleBackButton}
+                className="p-4 flex items-center text-sm font-medium"
               >
-                <X className="h-4 w-4" />
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to Lists
               </button>
             )}
-          </div>
-        </div>
-        <Lists 
-          lists={lists}
-          selectedList={selectedList}
-          setSelectedList={handleListSelect}
-          searchQuery={searchQuery}
-        />
-      </div>
-
-      {/* List */}
-      <DndContext 
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <div className={`
-          flex-grow
-          ${isMobileView && showSidebar ? 'translate-x-full' : 'translate-x-0'}
-          transition-transform duration-300 ease-in-out
-          flex flex-col
-        `}>
-          {isMobileView && (
-            <button
-              onClick={handleBackButton}
-              className="p-4 flex items-center text-sm font-medium"
-            >
-              <ChevronLeft className="mr-2 h-4 w-4" />
-              Back to Lists
-            </button>
-          )}
-          <List
-            {...{
-              lists,
-              setLists,
-              selectedList,
-              setSelectedList,
-              handlePinList,
-              setIsDeleteConfirmOpen,
-              newItem,
-              setNewItem,
-              setNewListName,
-              setIsRenaming,
-              setIsModalOpen,
-              deletedItems,
-              setDeletedItems,
-              toast,
-              newListCreated,
-              setNewListCreated,
-              handleDeleteList,
-              isEditingMultiple,
-              setIsEditingMultiple,
-              onCreateNewList: handleCreateNewListWithSelection,
-            }}
-          />
-        </div>
-      </DndContext>
-
-      {/* Modal for creating/renaming list */}
-      <Dialog open={isModalOpen} onOpenChange={(open) => {
-        setIsModalOpen(open);
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {isRenaming ? "Rename List" : "Create New List"}
-            </DialogTitle>
-          </DialogHeader>
-          <Input
-            value={newListName}
-            onChange={(e) => setNewListName(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="List Name"
-            autoFocus
-          />
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsModalOpen(false);
-                setIsRenaming(false);
-                setNewListName("");
+            <List
+              {...{
+                lists,
+                setLists,
+                selectedList,
+                setSelectedList,
+                handlePinList,
+                setIsDeleteConfirmOpen,
+                newItem,
+                setNewItem,
+                setNewListName,
+                setIsRenaming,
+                setIsModalOpen,
+                deletedItems,
+                setDeletedItems,
+                toast,
+                newListCreated,
+                setNewListCreated,
+                handleDeleteList,
+                isEditingMultiple,
+                setIsEditingMultiple,
+                onCreateNewList: handleCreateNewListWithSelection,
               }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={isRenaming ? handleRenameList : handleCreateList}>
-              {isRenaming ? "Rename" : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            />
+          </div>
+        </DndContext>
 
-      {/* Confirmation dialog for deleting list */}
-      <AlertDialog
-        open={isDeleteConfirmOpen}
-        onOpenChange={setIsDeleteConfirmOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Are you sure?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the list "{listToDelete?.name}" and all its items.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>No</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDeleteList}>Yes, delete list</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <Toaster />
-    </div>
+        {/* Modal for creating/renaming list */}
+        <Dialog open={isModalOpen} onOpenChange={(open) => {
+          setIsModalOpen(open);
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {isRenaming ? "Rename List" : "Create New List"}
+              </DialogTitle>
+            </DialogHeader>
+            <Input
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="List Name"
+              autoFocus
+            />
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setIsRenaming(false);
+                  setNewListName("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={isRenaming ? handleRenameList : handleCreateList}>
+                {isRenaming ? "Rename" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirmation dialog for deleting list */}
+        <AlertDialog
+          open={isDeleteConfirmOpen}
+          onOpenChange={setIsDeleteConfirmOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the list "{listToDelete?.name}" and all its items.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>No</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteList}>Yes, delete list</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Toaster />
+      </div>
     </ThemeProvider>
   );
-  
 }
